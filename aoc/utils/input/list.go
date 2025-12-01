@@ -3,6 +3,7 @@ package input
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 	"iter"
 	"slices"
@@ -48,7 +49,7 @@ func ValueIter[T any](r io.Reader, sep string, end ...string) iter.Seq2[T, error
 
 			if bytes.HasSuffix(curValue, sepBytes) {
 				curValue = bytes.TrimSuffix(curValue, sepBytes)
-				v, err := readValue[T](slices.Clone(curValue))
+				v, err := ReadValueFromBytes[T](slices.Clone(curValue))
 				if !yield(v, err) {
 					return
 				}
@@ -61,15 +62,37 @@ func ValueIter[T any](r io.Reader, sep string, end ...string) iter.Seq2[T, error
 			curValue = bytes.TrimSuffix(curValue, []byte(end[0]))
 		}
 		if len(curValue) > 0 {
-			v, err := readValue[T](curValue)
+			v, err := ReadValueFromBytes[T](curValue)
 			_ = yield(v, err)
 		}
 	}
 }
 
-func readValue[T any](data []byte) (T, error) {
+func ReadValue[T any](r io.Reader) (T, error) {
 	var zero T
-	switch v := any(zero).(type) {
+
+	if v, ok := any(&zero).(Input); ok {
+		if err := v.ParseFrom(r); err != nil {
+			return zero, err
+		}
+		return *any(v).(*T), nil
+	}
+
+	if _, ok := any(zero).(byte); ok {
+		var v [1]byte
+		_, err := r.Read(v[:])
+		if err != nil {
+			return zero, err
+		}
+		return any(v[0]).(T), nil
+	}
+
+	data, err := io.ReadAll(r)
+	if err != nil {
+		return zero, err
+	}
+
+	switch any(zero).(type) {
 	case string:
 		return any(string(data)).(T), nil
 	case int:
@@ -78,20 +101,22 @@ func readValue[T any](data []byte) (T, error) {
 			return zero, err
 		}
 		return any(i).(T), nil
-	case byte:
-		if len(data) > 1 {
-			panic("too many bytes")
-		}
-		return any(data[0]).(T), nil
-	case Input:
-		_, err := v.ReadFrom(bytes.NewReader(data))
-		if err != nil {
-			return zero, err
-		}
-		return any(v).(T), nil
-	default:
-		return zero, errors.New("unknown error")
 	}
+
+	return zero, fmt.Errorf("type %T %w", zero, errors.ErrUnsupported)
+}
+
+func ReadValueFromBytes[T any](data []byte) (T, error) {
+	r := bytes.NewReader(data)
+	return ReadValue[T](r)
+}
+
+func MustReadValue[T any](r io.Reader) T {
+	v, err := ReadValue[T](r)
+	if err != nil {
+		panic(err)
+	}
+	return v
 }
 
 func SkipLine(r io.Reader) {

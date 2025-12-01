@@ -11,11 +11,13 @@ import (
 
 	"github.com/Krivoguzov-Vlad/aoc/aoc"
 	aoc2024 "github.com/Krivoguzov-Vlad/aoc/aoc/2024"
+	aoc2025 "github.com/Krivoguzov-Vlad/aoc/aoc/2025"
 )
 
 func main() {
 	years := map[int]aoc.AOC{
 		2024: aoc2024.AOC,
+		2025: aoc2025.AOC,
 	}
 
 	args := NewArgs()
@@ -26,7 +28,7 @@ func main() {
 		args.Year, _ = strconv.Atoi(os.Args[2])
 	}
 
-	solver := years[args.Year][args.Day-1]
+	solver := years[args.Year][args.Day]
 	solver.ReadInput(input(args))
 	fmt.Println(solver.Part1())
 	fmt.Println(solver.Part2())
@@ -51,7 +53,7 @@ func NewArgs() Args {
 	now := time.Now()
 	return Args{
 		Year: now.Year(),
-		Day:  now.Day() - 1,
+		Day:  now.Day(),
 	}
 }
 

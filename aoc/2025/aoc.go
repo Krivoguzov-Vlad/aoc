@@ -1,0 +1,19 @@
+package aoc2025
+
+import "github.com/Krivoguzov-Vlad/aoc/aoc"
+
+var AOC aoc.AOC = aoc.AOC{
+	nil, // index from 1
+	new(Day1),
+	// new(Day2),
+	// new(Day3),
+	// new(Day4),
+	// new(Day5),
+	// new(Day6),
+	// new(Day7),
+	// new(Day8),
+	// new(Day9),
+	// new(Day10),
+	// new(Day11),
+	// new(Day12),
+}

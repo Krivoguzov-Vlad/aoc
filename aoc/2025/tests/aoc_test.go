@@ -1,0 +1,40 @@
+package aoc2025
+
+import (
+	"fmt"
+	"testing"
+
+	aoc2025 "github.com/Krivoguzov-Vlad/aoc/aoc/2025"
+	"github.com/Krivoguzov-Vlad/aoc/aoc/utils/input"
+	"github.com/stretchr/testify/require"
+)
+
+type TestCase struct {
+}
+
+func TestAOC(t *testing.T) {
+	type answer struct {
+		part1 string
+		part2 string
+	}
+
+	answers := [...]answer{
+		1: {part1: "3", part2: "6"},
+	}
+
+	for day, solver := range aoc2025.AOC {
+		if solver == nil {
+			continue
+		}
+		t.Run(fmt.Sprintf("Day %d", day), func(t *testing.T) {
+			input := input.MustReadFile(fmt.Sprintf("%d.txt", day))
+			solver.ReadInput(input)
+			if solver.Part1() != answers[day].part1 {
+				require.Equal(t, answers[day].part1, solver.Part1())
+			}
+			if solver.Part2() != answers[day].part2 {
+				require.Equal(t, answers[day].part2, solver.Part2())
+			}
+		})
+	}
+}

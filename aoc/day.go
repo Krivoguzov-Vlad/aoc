@@ -8,4 +8,4 @@ type Day interface {
 	Part2() string
 }
 
-type AOC [25]Day
+type AOC []Day
