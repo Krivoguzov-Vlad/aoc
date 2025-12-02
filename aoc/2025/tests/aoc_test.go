@@ -9,9 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-type TestCase struct {
-}
-
 func TestAOC(t *testing.T) {
 	type answer struct {
 		part1 string
@@ -30,12 +27,8 @@ func TestAOC(t *testing.T) {
 		t.Run(fmt.Sprintf("Day %d", day), func(t *testing.T) {
 			input := input.MustReadFile(fmt.Sprintf("%d.txt", day))
 			solver.ReadInput(input)
-			if solver.Part1() != answers[day].part1 {
-				require.Equal(t, answers[day].part1, solver.Part1())
-			}
-			if solver.Part2() != answers[day].part2 {
-				require.Equal(t, answers[day].part2, solver.Part2())
-			}
+			require.Equal(t, answers[day].part1, solver.Part1())
+			require.Equal(t, answers[day].part2, solver.Part2())
 		})
 	}
 }
