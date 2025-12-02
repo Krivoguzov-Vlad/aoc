@@ -20,6 +20,7 @@ func TestAOC(t *testing.T) {
 
 	answers := [...]answer{
 		1: {part1: "3", part2: "6"},
+		2: {part1: "1227775554", part2: "4174379265"},
 	}
 
 	for day, solver := range aoc2025.AOC {

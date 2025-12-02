@@ -5,7 +5,7 @@ import "github.com/Krivoguzov-Vlad/aoc/aoc"
 var AOC aoc.AOC = aoc.AOC{
 	nil, // index from 1
 	new(Day1),
-	// new(Day2),
+	new(Day2),
 	// new(Day3),
 	// new(Day4),
 	// new(Day5),
