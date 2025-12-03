@@ -95,6 +95,8 @@ func ReadValue[T any](r io.Reader) (T, error) {
 	switch any(zero).(type) {
 	case string:
 		return any(string(data)).(T), nil
+	case []byte:
+		return any(data).(T), nil
 	case int:
 		i, err := strconv.Atoi(string(data))
 		if err != nil {
