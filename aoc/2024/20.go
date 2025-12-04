@@ -11,9 +11,9 @@ import (
 
 type Day20 struct {
 	m    *utils.Matrix[byte]
-	s, e utils.Coordinate
+	s, e utils.Cell[byte]
 
-	coordinateToTime map[utils.Coordinate]int
+	coordinateToTime map[utils.Cell[byte]]int
 }
 
 func (d *Day20) ReadInput(r io.Reader) {
@@ -48,19 +48,21 @@ func (d *Day20) countCheats(maxCheatLen int, minSave int) int {
 
 func (d *Day20) fillTimes() {
 	t := 0
-	d.coordinateToTime = make(map[utils.Coordinate]int)
-	d.m.DFS(d.s, func(depth int, c utils.Coordinate) (needWalk bool) {
+	d.coordinateToTime = make(map[utils.Cell[byte]]int)
+	for _, cell := range d.s.DFS(func(depth int, c utils.Cell[byte]) (needWalk bool) {
 		_, ok := d.coordinateToTime[c]
-		return !ok && d.m.Get(c) != '#'
-	}, func(depth int, c utils.Coordinate) (stop bool) {
-		d.coordinateToTime[c] = t
+		return !ok && c.Value() != '#'
+	}) {
+		d.coordinateToTime[cell] = t
 		t++
-		return c == d.e
-	})
+		if cell == d.e {
+			return
+		}
+	}
 }
 
-func (d *Day20) cheatIter(maxCheatLen int) iter.Seq2[utils.Coordinate, utils.Coordinate] {
-	return func(yield func(utils.Coordinate, utils.Coordinate) bool) {
+func (d *Day20) cheatIter(maxCheatLen int) iter.Seq2[utils.Cell[byte], utils.Cell[byte]] {
+	return func(yield func(utils.Cell[byte], utils.Cell[byte]) bool) {
 		for cheatStart := range d.coordinateToTime {
 			for e := range d.cheatEnds(cheatStart, maxCheatLen) {
 				if !yield(cheatStart, e) {
@@ -71,27 +73,23 @@ func (d *Day20) cheatIter(maxCheatLen int) iter.Seq2[utils.Coordinate, utils.Coo
 	}
 }
 
-func (d *Day20) cheatEnds(c utils.Coordinate, cheatLen int) iter.Seq[utils.Coordinate] {
-	return func(yield func(utils.Coordinate) bool) {
+func (d *Day20) cheatEnds(c utils.Cell[byte], cheatLen int) iter.Seq[utils.Cell[byte]] {
+	return func(yield func(utils.Cell[byte]) bool) {
 		d.cheatEndBFS(c, cheatLen, yield)
 	}
 }
 
 func (d *Day20) cheatEndBFS(
-	s utils.Coordinate,
+	s utils.Cell[byte],
 	maxDepth int,
-	yield func(utils.Coordinate) bool,
+	yield func(utils.Cell[byte]) bool,
 ) {
-	d.m.DFS(s, func(depth int, c utils.Coordinate) (needWalk bool) {
+	for _, cell := range s.DFS(func(depth int, c utils.Cell[byte]) (needWalk bool) {
 		return depth <= maxDepth
-	}, func(depth int, c utils.Coordinate) (stop bool) {
-		if c == s {
-			return false
+	}) {
+		_, ok := d.coordinateToTime[cell]
+		if ok && !yield(cell) {
+			return
 		}
-		_, ok := d.coordinateToTime[c]
-		if ok {
-			return !yield(c)
-		}
-		return false
-	})
+	}
 }

@@ -26,28 +26,29 @@ func (m Matrix[T]) Get(c Coordinate) T {
 	return m.Values[c.Y][c.X]
 }
 
-func (m Matrix[T]) Find(item T) Coordinate {
-	return m.FindFunc(func(t T) bool {
-		return t == item
+func (m Matrix[T]) Find(item T) Cell[T] {
+	return m.FindFunc(func(cell Cell[T]) bool {
+		return cell.Value() == item
 	})
 }
 
-func (m Matrix[T]) FindFunc(f func(T) bool) Coordinate {
+func (m *Matrix[T]) FindFunc(f func(cell Cell[T]) bool) Cell[T] {
 	for i := range m.Values {
 		for j := range m.Values[i] {
-			if f(m.Values[i][j]) {
-				return Coordinate{X: j, Y: i}
+			cell := Cell[T]{Coordinate: Coordinate{X: j, Y: i}, m: m}
+			if f(cell) {
+				return cell
 			}
 		}
 	}
-	return Coordinate{X: -1, Y: -1}
+	return Cell[T]{Coordinate: Coordinate{X: -1, Y: -1}, m: m}
 }
 
-func (m Matrix[T]) Iter() iter.Seq[Cell[T]] {
+func (m *Matrix[T]) Iter() iter.Seq[Cell[T]] {
 	return func(yield func(Cell[T]) bool) {
 		for i := range m.Values {
 			for j := range m.Values[i] {
-				if !yield(Cell[T]{c: Coordinate{X: j, Y: i}, m: &m}) {
+				if !yield(Cell[T]{Coordinate: Coordinate{X: j, Y: i}, m: m}) {
 					return
 				}
 			}
@@ -70,34 +71,31 @@ func (m Matrix[T]) Print() {
 	}
 }
 
-func (m Matrix[T]) DFS(
-	s Coordinate,
-	needWalk func(depth int, c Coordinate) (needWalk bool),
-	foreach func(depth int, c Coordinate) (stop bool)) {
+func (m *Matrix[T]) DFS(start Coordinate, needWalk func(depth int, c Cell[T]) bool) iter.Seq2[int, Cell[T]] {
 	var queue []Coordinate
-	queue = append(queue, s)
+	queue = append(queue, start)
 	addedToQueue := make(map[Coordinate]bool)
 
-	for depth := 0; len(queue) > 0; depth++ {
-		layer := queue
-		queue = queue[len(layer):]
-		for _, item := range layer {
-			if foreach(depth, item) {
-				return
-			}
+	return func(yield func(int, Cell[T]) bool) {
+		for depth := 0; len(queue) > 0; depth++ {
+			layer := queue
+			queue = queue[len(layer):]
+			for _, item := range layer {
+				cell := Cell[T]{Coordinate: item, m: m}
+				if !yield(depth, cell) {
+					return
+				}
 
-			for _, c := range item.Neighbours() {
-				if !m.IsValid(c) {
-					continue
+				for c := range cell.Neighbours() {
+					if addedToQueue[c.Coordinate] {
+						continue
+					}
+					if !needWalk(depth+1, c) {
+						continue
+					}
+					queue = append(queue, c.Coordinate)
+					addedToQueue[c.Coordinate] = true
 				}
-				if addedToQueue[c] {
-					continue
-				}
-				if !needWalk(depth+1, c) {
-					continue
-				}
-				queue = append(queue, c)
-				addedToQueue[c] = true
 			}
 		}
 	}
