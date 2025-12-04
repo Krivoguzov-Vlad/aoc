@@ -1,6 +1,9 @@
 package utils
 
-import "fmt"
+import (
+	"fmt"
+	"iter"
+)
 
 type Matrix[T comparable] struct {
 	Values [][]T
@@ -38,6 +41,18 @@ func (m Matrix[T]) FindFunc(f func(T) bool) Coordinate {
 		}
 	}
 	return Coordinate{X: -1, Y: -1}
+}
+
+func (m Matrix[T]) Iter() iter.Seq[Cell[T]] {
+	return func(yield func(Cell[T]) bool) {
+		for i := range m.Values {
+			for j := range m.Values[i] {
+				if !yield(Cell[T]{c: Coordinate{X: j, Y: i}, m: &m}) {
+					return
+				}
+			}
+		}
+	}
 }
 
 func (m Matrix[T]) Print() {

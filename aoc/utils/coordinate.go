@@ -47,6 +47,18 @@ func (c Coordinate) Neighbours() []Coordinate {
 	}
 }
 
+func (c Coordinate) Neighbours8() []Coordinate {
+	return []Coordinate{
+		c.Add(Up),
+		c.Add(Down),
+		c.Add(Left),
+		c.Add(Right),
+		c.Add(Up).Add(Left),
+		c.Add(Up).Add(Right),
+		c.Add(Down).Add(Left),
+		c.Add(Down).Add(Right),
+	}
+}
 func AllDirections() [4]Coordinate {
 	return [4]Coordinate{Up, Down, Left, Right}
 }
