@@ -46,6 +46,9 @@ func ValueIter[T any](r io.Reader, sep string, end ...string) iter.Seq2[T, error
 			}
 
 			curValue = append(curValue, b[0])
+			if bytes.Equal(curValue, sepBytes) {
+				break
+			}
 
 			if bytes.HasSuffix(curValue, sepBytes) {
 				curValue = bytes.TrimSuffix(curValue, sepBytes)
