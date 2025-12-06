@@ -100,3 +100,7 @@ func (m *Matrix[T]) DFS(start Coordinate, needWalk func(depth int, c Cell[T]) bo
 		}
 	}
 }
+
+func (m *Matrix[T]) Transpose() *Matrix[T] {
+	return &Matrix[T]{Values: Transpose(m.Values)}
+}
