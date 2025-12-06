@@ -10,7 +10,7 @@ import (
 	"strconv"
 )
 
-func MustReadList[T any](r io.Reader, sep string, opt ...SplitOpt) []T {
+func MustReadList[T any](r io.Reader, sep string, opt ...SplitOpt[T]) []T {
 	res, err := ReadList[T](r, sep, opt...)
 	if err != nil {
 		panic(err)
@@ -18,7 +18,7 @@ func MustReadList[T any](r io.Reader, sep string, opt ...SplitOpt) []T {
 	return res
 }
 
-func ReadList[T any](r io.Reader, sep string, opt ...SplitOpt) ([]T, error) {
+func ReadList[T any](r io.Reader, sep string, opt ...SplitOpt[T]) ([]T, error) {
 	var res []T
 	for v, err := range ValueIter[T](r, sep, opt...) {
 		if err != nil {
@@ -29,24 +29,28 @@ func ReadList[T any](r io.Reader, sep string, opt ...SplitOpt) ([]T, error) {
 	return res, nil
 }
 
-type SplitOpt struct {
+type SplitOpt[T any] struct {
 	Until     string
 	WithEmpty bool
+	ParseFunc func(io.Reader) (T, error)
 }
 
-var DefaultSplitOpt = SplitOpt{
-	Until:     "",
-	WithEmpty: false,
-}
-
-func ValueIter[T any](r io.Reader, sep string, opt ...SplitOpt) iter.Seq2[T, error] {
+func ValueIter[T any](r io.Reader, sep string, opt ...SplitOpt[T]) iter.Seq2[T, error] {
 	if len(opt) == 0 {
-		opt = append(opt, DefaultSplitOpt)
+		var zero SplitOpt[T]
+		opt = append(opt, zero)
 	}
 
 	sepsBytes := [][]byte{[]byte(sep)}
 	if len(opt[0].Until) > 0 {
 		sepsBytes = append(sepsBytes, []byte(opt[0].Until))
+	}
+
+	parseFunc := ReadValueFromBytes[T]
+	if opt[0].ParseFunc != nil {
+		parseFunc = func(data []byte) (T, error) {
+			return opt[0].ParseFunc(bytes.NewReader(data))
+		}
 	}
 
 	return func(yield func(T, error) bool) {
@@ -75,7 +79,7 @@ func ValueIter[T any](r io.Reader, sep string, opt ...SplitOpt) iter.Seq2[T, err
 					continue
 				}
 
-				v, err := ReadValueFromBytes[T](slices.Clone(curValue))
+				v, err := parseFunc(slices.Clone(curValue))
 				if !yield(v, err) {
 					return
 				}
@@ -100,7 +104,7 @@ func ValueIter[T any](r io.Reader, sep string, opt ...SplitOpt) iter.Seq2[T, err
 			return
 		}
 
-		v, err := ReadValueFromBytes[T](curValue)
+		v, err := parseFunc(curValue)
 		_ = yield(v, err)
 	}
 }
