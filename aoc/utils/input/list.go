@@ -10,17 +10,17 @@ import (
 	"strconv"
 )
 
-func MustReadList[T any](r io.Reader, sep string, end ...string) []T {
-	res, err := ReadList[T](r, sep, end...)
+func MustReadList[T any](r io.Reader, sep string, opt ...SplitOpt) []T {
+	res, err := ReadList[T](r, sep, opt...)
 	if err != nil {
 		panic(err)
 	}
 	return res
 }
 
-func ReadList[T any](r io.Reader, sep string, end ...string) ([]T, error) {
+func ReadList[T any](r io.Reader, sep string, opt ...SplitOpt) ([]T, error) {
 	var res []T
-	for v, err := range ValueIter[T](r, sep, end...) {
+	for v, err := range ValueIter[T](r, sep, opt...) {
 		if err != nil {
 			return nil, err
 		}
@@ -29,46 +29,109 @@ func ReadList[T any](r io.Reader, sep string, end ...string) ([]T, error) {
 	return res, nil
 }
 
-func ValueIter[T any](r io.Reader, sep string, end ...string) iter.Seq2[T, error] {
-	sepBytes := []byte(sep)
+type SplitOpt struct {
+	Until     string
+	WithEmpty bool
+}
+
+var DefaultSplitOpt = SplitOpt{
+	Until:     "",
+	WithEmpty: false,
+}
+
+func ValueIter[T any](r io.Reader, sep string, opt ...SplitOpt) iter.Seq2[T, error] {
+	if len(opt) == 0 {
+		opt = append(opt, DefaultSplitOpt)
+	}
+
+	sepsBytes := [][]byte{[]byte(sep)}
+	if len(opt[0].Until) > 0 {
+		sepsBytes = append(sepsBytes, []byte(opt[0].Until))
+	}
+
 	return func(yield func(T, error) bool) {
 		var curValue []byte
-		for len(end) == 0 || !bytes.HasSuffix(curValue, []byte(end[0])) {
-			var b [1]byte
-			_, err := r.Read(b[:])
+		var lastSep []byte
+
+		for b, err := range byteIter(r) {
 			if err != nil {
-				if errors.Is(err, io.EOF) {
-					break
-				}
 				var zero T
 				_ = yield(zero, err)
 				return
 			}
 
-			curValue = append(curValue, b[0])
-			if bytes.Equal(curValue, sepBytes) {
-				break
+			lastSep = append(lastSep, b)
+			curValue = append(curValue, b)
+			if len(opt[0].Until) > 0 && len(curValue) <= len(lastSep) {
+				if bytes.Equal(lastSep, []byte(opt[0].Until)) {
+					return
+				}
 			}
 
-			if bytes.HasSuffix(curValue, sepBytes) {
-				curValue = bytes.TrimSuffix(curValue, sepBytes)
+			if suffix, found := hasAnySuffix(curValue, sepsBytes); found {
+				curValue = bytes.TrimSuffix(curValue, suffix)
+
+				if !opt[0].WithEmpty && len(curValue) == 0 {
+					continue
+				}
+
 				v, err := ReadValueFromBytes[T](slices.Clone(curValue))
 				if !yield(v, err) {
 					return
 				}
 				curValue = curValue[:0]
 			}
+
+			if len(opt[0].Until) > 0 {
+				if bytes.Equal(lastSep, []byte(opt[0].Until)) {
+					return
+				}
+				if !bytes.HasPrefix([]byte(opt[0].Until), lastSep) {
+					lastSep = lastSep[:0]
+				}
+				continue
+			}
 		}
 
-		curValue = bytes.TrimSuffix(curValue, sepBytes)
-		if len(end) > 0 {
-			curValue = bytes.TrimSuffix(curValue, []byte(end[0]))
+		for _, sep := range sepsBytes {
+			curValue = bytes.TrimSuffix(curValue, sep)
 		}
-		if len(curValue) > 0 {
-			v, err := ReadValueFromBytes[T](curValue)
-			_ = yield(v, err)
+		if !opt[0].WithEmpty && len(curValue) == 0 {
+			return
+		}
+
+		v, err := ReadValueFromBytes[T](curValue)
+		_ = yield(v, err)
+	}
+}
+
+func byteIter(r io.Reader) iter.Seq2[byte, error] {
+	return func(yield func(byte, error) bool) {
+		for {
+			var b [1]byte
+			_, err := r.Read(b[:])
+			if err != nil {
+				if errors.Is(err, io.EOF) {
+					break
+				}
+				var zero byte
+				_ = yield(zero, err)
+				return
+			}
+			if !yield(b[0], nil) {
+				return
+			}
 		}
 	}
+}
+
+func hasAnySuffix(b []byte, suffixes [][]byte) (suffix []byte, found bool) {
+	for _, suffix := range suffixes {
+		if bytes.HasSuffix(b, suffix) {
+			return suffix, true
+		}
+	}
+	return nil, false
 }
 
 func ReadValue[T any](r io.Reader) (T, error) {
