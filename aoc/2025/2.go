@@ -13,7 +13,7 @@ type Day2 struct {
 }
 
 func (d *Day2) ReadInput(r io.Reader) {
-	d.ranges = input.MustReadList[idRange](r, ",", input.SplitOpt{Until: "\n"})
+	d.ranges = input.MustReadList(r, ",", input.SplitOpt[idRange]{Until: "\n"})
 }
 
 func (d *Day2) Part1() string {

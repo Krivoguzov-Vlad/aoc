@@ -15,7 +15,7 @@ type Day5 struct {
 }
 
 func (d *Day5) ReadInput(r io.Reader) {
-	d.ranges = input.MustReadList[idRange](r, "\n", input.SplitOpt{Until: "\n\n"})
+	d.ranges = input.MustReadList(r, "\n", input.SplitOpt[idRange]{Until: "\n\n"})
 	d.ids = input.MustReadList[int](r, "\n")
 	d.mergeRanges()
 }

@@ -14,7 +14,7 @@ type Day19 struct {
 }
 
 func (d *Day19) ReadInput(r io.Reader) {
-	d.Towels = input.MustReadList[string](r, ", ", "\n")
+	d.Towels = input.MustReadList(r, ", ", input.SplitOpt[string]{Until: "\n"})
 	input.SkipLine(r)
 	d.Designs = input.MustReadList[string](r, "\n")
 }
