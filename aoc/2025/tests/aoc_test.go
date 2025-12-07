@@ -22,6 +22,7 @@ func TestAOC(t *testing.T) {
 		4: {part1: "13", part2: "43"},
 		5: {part1: "3", part2: "14"},
 		6: {part1: "4277556", part2: "3263827"},
+		7: {part1: "21", part2: "40"},
 	}
 
 	for day, answer := range answers {
